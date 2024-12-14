@@ -2,6 +2,7 @@ import {User}from "../model/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { BlacklistToken } from "../model/blacklisttoken.model.js";
 
 const registerUser = asyncHandler(async (req, res) => {
     const { fullname, email, password } = req.body;
@@ -48,6 +49,64 @@ const registerUser = asyncHandler(async (req, res) => {
     )
 })
 
+const loginUser = asyncHandler(async (req,res) => {
+    const {email, password} = req.body;
+    if(!email && !password){
+        throw new ApiError(400,"email and password is required");
+    }
+
+    const user = await User.findOne({email}).select( '+password')
+
+    if(!user){
+        throw new ApiError(404," user does not exist or inavlid username or password ")
+    }
+
+    const loggedUser = await User.findById(user._id).select("+password")
+
+
+    const isPasswordValid = await user.isPasswordCorrect(password)
+    if(!isPasswordValid){
+        throw new ApiError(401,"invalid password is types")
+    }
+    const token = loggedUser.generateAuthToken();
+    
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+
+
+    return res
+    .status(200)
+    .cookie("token", token)
+    .json(
+        new ApiResponse(200,{token, user: loggedUser}, "user logged in successfully")
+    )
+
+})
+
+const getUserProfile = asyncHandler(async (req, res) => {
+    return res.status(200).json(
+        new ApiResponse(200, req.user, "current user fetched successfully")
+    )
+})
+
+const logoutUser = asyncHandler(async(req,res, next) => {
+
+    const token = req.cookies?.token || req.header("Authorization")?.replace("Bearer ","")   //check if the client requesting have cookies or not
+
+    await BlacklistToken.create({token}); // we create the token as blacklist now we will check in auth middleware that if logout user are trying to access
+
+    return res
+    .status(200)
+    .clearCookie("token")
+    .json(new ApiResponse(200, {},"Owner logged out successfully"))
+
+})
+
 export {
     registerUser,
+    loginUser,
+    getUserProfile,
+    logoutUser,
 }
