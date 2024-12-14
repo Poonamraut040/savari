@@ -2,7 +2,9 @@ import mongoose, {Schema} from "mongoose";
 import bcrypt  from "bcrypt";
 import jwt from "jsonwebtoken";
 
-const userSchema = new Schema({
+
+
+const captainSchema = new Schema({
     fullname: {
         firstname:{
             type: String,
@@ -15,12 +17,13 @@ const userSchema = new Schema({
         },
 
     },
-    email:{
+    email: {
         type: String,
         required:true,
         unique: true,
         lowercase: true,
         minlength:[5,'email must be 5 character long'],
+        
     },
     password: {
         type: String,
@@ -30,14 +33,49 @@ const userSchema = new Schema({
     SocketId: {
         type: String,
     },
+    status:{
+        type: String,
+        enum: ['active','inactive'],
+        default: 'inactive',
+    },
+    vehicle: {
+        color:{
+            type: String,
+            required: true,
+            minlength:[3,'email must be 3 character long'],
+        },
+        plate:{
+            type: String,
+            required: true,
+            minlength:[3,'email must be 3 character long'],
+        },
+        capacity:{
+            type: Number,
+            required: true,
+            minlength:[3,'email must be 3 character long'],
+        },
+        VehicleType:{
+            type: String,
+            required: true,
+            enum:['car', 'motorcycle','auto']
+        }
+    },
+    location:{
+        lat:{
+            type: Number,
+        },
+        lng:{
+            type: Number,
+        }
+    }
 });
 
-userSchema.methods.generateAuthToken = function () {  // Use regular function
+captainSchema.methods.generateAuthToken = function () {  // Use regular function
     const token = jwt.sign({ _id: this._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
     return token;
 };
 
-userSchema.methods.isPasswordCorrect = async function(password){
+captainSchema.methods.isPasswordCorrect = async function(password){
     try {
           return await bcrypt.compare(password, this.password)
       
@@ -47,7 +85,7 @@ userSchema.methods.isPasswordCorrect = async function(password){
     }}
     
 
-userSchema.statics.hashedPassword = async (password) => {
+captainSchema.statics.hashedPassword = async (password) => {
     try {
         return await bcrypt.hash(password, 10);
     } catch (error) {
@@ -55,4 +93,5 @@ userSchema.statics.hashedPassword = async (password) => {
     }
 };    
 
-export const User = mongoose.model("User",userSchema)
+
+export const Captain = mongoose.model("Captain", captainSchema);
